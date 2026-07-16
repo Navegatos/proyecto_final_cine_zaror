@@ -1,0 +1,59 @@
+services:
+  oracle:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: cinezaror-oracle
+    ports:
+      - "1522:1521"  # 1522 en host para no chocar con oracle21c en 1521
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_SYS_PASSWORD:-Oracle123}
+      APP_USER: ${ORACLE_USERNAME:-curso}
+      APP_USER_PASSWORD: ${ORACLE_PASSWORD:-curso123}
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cinezaror-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      ORACLE_URL: jdbc:oracle:thin:@//oracle:1521/XEPDB1
+      ORACLE_USERNAME: ${ORACLE_USERNAME:-curso}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-curso123}
+      JWT_SECRET: ${JWT_SECRET:-cambiar-este-secreto-en-produccion-minimo-32-caracteres}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    depends_on:
+      oracle:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cinezaror-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  oracle_data:
