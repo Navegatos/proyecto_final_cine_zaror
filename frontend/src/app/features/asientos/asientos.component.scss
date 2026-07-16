@@ -1,0 +1,8 @@
+.pantalla { text-align: center; margin: 1rem 0; font-weight: bold; letter-spacing: 0.2em; }
+.mapa { display: flex; flex-direction: column; gap: 0.5rem; overflow-x: auto; }
+.fila { display: flex; align-items: center; gap: 0.25rem; }
+.label { width: 1.5rem; font-weight: 600; }
+.asiento { min-width: 2.5rem; padding: 0; }
+.asiento.disponible { }
+.asiento.seleccionado { background: #3f51b5; color: #fff; }
+.asiento.ocupado, .asiento.inactivo { opacity: 0.5; }

@@ -1,0 +1,131 @@
+-- ============================================================================
+-- Cine Zaror — 06_triggers.sql
+-- Triggers del sistema.
+-- Fuente: docs/04-objetos-oracle.md (sección 5)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- TRG_USUARIO_NORMALIZAR_EMAIL
+-- RN-03: correo en minúsculas y sin espacios laterales.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER TRG_USUARIO_NORMALIZAR_EMAIL
+    BEFORE INSERT OR UPDATE OF CORREO ON USUARIO
+    FOR EACH ROW
+BEGIN
+    :NEW.CORREO := LOWER(TRIM(:NEW.CORREO));
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- TRG_RESERVA_FECHA_CREACION
+-- Completa fechas automáticas si no fueron informadas.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER TRG_RESERVA_FECHA_CREACION
+    BEFORE INSERT ON RESERVA
+    FOR EACH ROW
+BEGIN
+    IF :NEW.FECHA_CREACION IS NULL THEN
+        :NEW.FECHA_CREACION := SYSTIMESTAMP;
+    END IF;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- TRG_VALIDAR_RESERVA_ASIENTO
+-- RN-24: el asiento debe pertenecer a la sala de la función.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER TRG_VALIDAR_RESERVA_ASIENTO
+    BEFORE INSERT ON RESERVA_ASIENTO
+    FOR EACH ROW
+DECLARE
+    V_ID_SALA_FUNCION FUNCION.ID_SALA%TYPE;
+    V_ID_SALA_ASIENTO ASIENTO.ID_SALA%TYPE;
+BEGIN
+    SELECT F.ID_SALA
+    INTO   V_ID_SALA_FUNCION
+    FROM   FUNCION F
+    WHERE  F.ID_FUNCION = :NEW.ID_FUNCION;
+
+    SELECT A.ID_SALA
+    INTO   V_ID_SALA_ASIENTO
+    FROM   ASIENTO A
+    WHERE  A.ID_ASIENTO = :NEW.ID_ASIENTO;
+
+    IF V_ID_SALA_FUNCION <> V_ID_SALA_ASIENTO THEN
+        RAISE_APPLICATION_ERROR(-20046,
+            'El asiento no pertenece a la sala de la función');
+    END IF;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- TRG_AUDITAR_ESTADO_RESERVA
+-- Registra cambios de estado en AUDITORIA_RESERVA.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER TRG_AUDITAR_ESTADO_RESERVA
+    AFTER INSERT OR UPDATE OF ID_ESTADO ON RESERVA
+    FOR EACH ROW
+DECLARE
+    V_ESTADO_ANTERIOR VARCHAR2(30);
+    V_ESTADO_NUEVO    VARCHAR2(30);
+BEGIN
+    IF INSERTING THEN
+        SELECT ER.NOMBRE
+        INTO   V_ESTADO_NUEVO
+        FROM   ESTADO_RESERVA ER
+        WHERE  ER.ID_ESTADO = :NEW.ID_ESTADO;
+
+        INSERT INTO AUDITORIA_RESERVA (
+            ID_AUDITORIA, ID_RESERVA, ESTADO_ANTERIOR, ESTADO_NUEVO, OBSERVACION
+        ) VALUES (
+            SEQ_AUDITORIA_RESERVA.NEXTVAL,
+            :NEW.ID_RESERVA,
+            NULL,
+            V_ESTADO_NUEVO,
+            'Creación de reserva'
+        );
+    ELSIF UPDATING AND (:OLD.ID_ESTADO <> :NEW.ID_ESTADO) THEN
+        SELECT ER.NOMBRE INTO V_ESTADO_ANTERIOR
+        FROM   ESTADO_RESERVA ER WHERE ER.ID_ESTADO = :OLD.ID_ESTADO;
+
+        SELECT ER.NOMBRE INTO V_ESTADO_NUEVO
+        FROM   ESTADO_RESERVA ER WHERE ER.ID_ESTADO = :NEW.ID_ESTADO;
+
+        INSERT INTO AUDITORIA_RESERVA (
+            ID_AUDITORIA, ID_RESERVA, ESTADO_ANTERIOR, ESTADO_NUEVO, OBSERVACION
+        ) VALUES (
+            SEQ_AUDITORIA_RESERVA.NEXTVAL,
+            :NEW.ID_RESERVA,
+            V_ESTADO_ANTERIOR,
+            V_ESTADO_NUEVO,
+            'Cambio de estado'
+        );
+    END IF;
+END;
+/
+
+-- ----------------------------------------------------------------------------
+-- TRG_EVITAR_CAMBIO_FUNCION_RESERVADA
+-- RN-20: impide modificar sala o película con reservas pagadas.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER TRG_EVITAR_CAMBIO_FUNCION_RESERVADA
+    BEFORE UPDATE OF ID_PELICULA, ID_SALA ON FUNCION
+    FOR EACH ROW
+DECLARE
+    V_RESERVAS_PAGADAS NUMBER;
+BEGIN
+    IF :OLD.ID_PELICULA <> :NEW.ID_PELICULA OR :OLD.ID_SALA <> :NEW.ID_SALA THEN
+        SELECT COUNT(*)
+        INTO   V_RESERVAS_PAGADAS
+        FROM   RESERVA R
+        JOIN   ESTADO_RESERVA ER ON ER.ID_ESTADO = R.ID_ESTADO
+        WHERE  R.ID_FUNCION = :OLD.ID_FUNCION
+          AND  ER.NOMBRE = 'PAGADA';
+
+        IF V_RESERVAS_PAGADAS > 0 THEN
+            RAISE_APPLICATION_ERROR(-20038,
+                'No se puede modificar película o sala con reservas pagadas');
+        END IF;
+    END IF;
+END;
+/

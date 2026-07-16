@@ -1,0 +1,30 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Cartelera</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <div class="filtro">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" [formControl]="fechaCtrl" (dateChange)="cargar()" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+      <button mat-button (click)="cargar()">Buscar</button>
+    </div>
+
+    @if (loading) { <mat-spinner diameter="40"></mat-spinner> }
+    @else if (items.length === 0) { <p>Sin funciones para la fecha seleccionada.</p> }
+    @else {
+      <div class="grid">
+        @for (item of items; track item.funcionId) {
+          <mat-card class="item">
+            <mat-card-title>{{ item.titulo }}</mat-card-title>
+            <mat-card-subtitle>{{ item.sala }} — {{ item.hora }}</mat-card-subtitle>
+            <p>{{ item.clasificacion }} · {{ item.duracionMinutos }} min</p>
+            <p>Precio: ${{ item.precio | number }} · Disponibles: {{ item.asientosDisponibles }}</p>
+            <button mat-raised-button color="primary" (click)="irAsientos(item.funcionId)">Ver asientos</button>
+          </mat-card>
+        }
+      </div>
+    }
+  </mat-card-content>
+</mat-card>

@@ -1,0 +1,31 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Selección de asientos</mat-card-title>
+    <mat-card-subtitle>{{ data?.sala }}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loading) { <mat-spinner></mat-spinner> }
+    @else if (data) {
+      <div class="pantalla">PANTALLA</div>
+      <div class="mapa">
+        @for (fila of filas(); track fila) {
+          <div class="fila">
+            <span class="label">{{ fila }}</span>
+            @for (a of asientosFila(fila); track a.id) {
+              <button mat-stroked-button
+                class="asiento {{ cssClass(a) }}"
+                [disabled]="a.estado === 'OCUPADO' || a.estado === 'INACTIVO'"
+                (click)="toggle(a)">
+                {{ a.numero }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <p>Seleccionados: {{ seleccionados.size }}</p>
+      <button mat-raised-button color="primary" [disabled]="seleccionados.size === 0 || reservando" (click)="confirmar()">
+        Confirmar reserva
+      </button>
+    }
+  </mat-card-content>
+</mat-card>

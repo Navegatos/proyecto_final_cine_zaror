@@ -1,0 +1,27 @@
+.admin-container {
+  height: 100vh;
+}
+
+.admin-sidenav {
+  width: 240px;
+}
+
+.sidenav-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.admin-content {
+  padding: 1.5rem;
+}
+
+.active {
+  background: rgba(0, 0, 0, 0.04);
+}

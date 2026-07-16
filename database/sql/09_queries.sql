@@ -1,0 +1,27 @@
+-- ============================================================================
+-- Cine Zaror — 09_queries.sql
+-- Consultas de referencia para cartelera, asientos y reservas.
+-- ============================================================================
+
+PROMPT === Cartelera del día ===
+SELECT ID_FUNCION, TITULO, SALA, HORA, PRECIO, ASIENTOS_DISPONIBLES
+FROM   VW_CARTELERA
+WHERE  FECHA = TRUNC(SYSDATE) + 1
+ORDER BY TITULO, HORA;
+
+PROMPT === Asientos de una función ===
+SELECT ID_ASIENTO, FILA, NUMERO, ESTADO
+FROM   VW_ASIENTOS_FUNCION
+WHERE  ID_FUNCION = (SELECT MIN(ID_FUNCION) FROM FUNCION)
+ORDER BY FILA, NUMERO;
+
+PROMPT === Reservas de un usuario ===
+SELECT CODIGO, PELICULA, FECHA_HORA, SALA, ASIENTOS, TOTAL, ESTADO
+FROM   VW_RESERVAS_USUARIO
+WHERE  USUARIO = 'Juan Pérez'
+ORDER BY FECHA_CREACION DESC;
+
+PROMPT === Vista administrativa ===
+SELECT CODIGO, USUARIO, PELICULA, ESTADO, TOTAL, ESTADO_PAGO
+FROM   VW_RESERVAS_ADMIN
+ORDER BY FECHA_CREACION DESC;

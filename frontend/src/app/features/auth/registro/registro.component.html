@@ -1,0 +1,13 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Registro</mat-card-title></mat-card-header>
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+      <mat-form-field appearance="outline" class="full"><mat-label>RUT</mat-label><input matInput formControlName="rut" /></mat-form-field>
+      <mat-form-field appearance="outline" class="full"><mat-label>Nombre completo</mat-label><input matInput formControlName="nombreCompleto" /></mat-form-field>
+      <mat-form-field appearance="outline" class="full"><mat-label>Correo</mat-label><input matInput formControlName="correo" type="email" /></mat-form-field>
+      <mat-form-field appearance="outline" class="full"><mat-label>Contraseña</mat-label><input matInput formControlName="password" type="password" /></mat-form-field>
+      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Registrarse</button>
+    </form>
+  </mat-card-content>
+  <mat-card-actions><a mat-button routerLink="/login">Ya tengo cuenta</a></mat-card-actions>
+</mat-card>

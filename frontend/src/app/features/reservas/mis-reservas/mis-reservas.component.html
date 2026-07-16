@@ -1,0 +1,17 @@
+<mat-card>
+  <mat-card-header><mat-card-title>Mis reservas</mat-card-title></mat-card-header>
+  <mat-card-content>
+    @if (loading) { <mat-spinner></mat-spinner> }
+    @else if (reservas.length === 0) { <p>No tiene reservas.</p> }
+    @else {
+      @for (r of reservas; track r.reservaId) {
+        <mat-card class="reserva">
+          <mat-card-title>{{ r.codigo }} — {{ r.estado }}</mat-card-title>
+          <mat-card-subtitle>{{ r.pelicula }} · {{ r.fechaHora | date:'short' }}</mat-card-subtitle>
+          <p>{{ r.sala }} · Asientos: {{ r.asientos }}</p>
+          <p>Total: ${{ r.total | number }}</p>
+        </mat-card>
+      }
+    }
+  </mat-card-content>
+</mat-card>
