@@ -1,0 +1,43 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs y editores
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+*.sublime-workspace
+.history/
+
+# Variables de entorno y secretos locales
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Herramientas descargadas localmente
+.tools/
+
+# Artefactos de compilación (respaldo a nivel monorepo)
+**/target/
+**/node_modules/
+**/dist/
+**/.angular/cache
+**/out-tsc/
+**/coverage/
+
+# Cursor / agentes locales
+.cursor/
+
+# Temporales
+*.tmp
+*.swp
+*~
