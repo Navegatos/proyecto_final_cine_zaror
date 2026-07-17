@@ -102,22 +102,49 @@ npm start
 
 Abrir http://localhost:4200 (proxy a backend en `/api`).
 
-## 4. Flujo demo end-to-end
+## 4. Flujo demo end-to-end (cliente)
 
 1. Login como `juan@email.com` / `Secreta123`
 2. Cartelera → seleccionar fecha (mañana) → ver función
 3. Seleccionar asientos → confirmar reserva
 4. Checkout → simular pago
 5. Mis reservas → verificar estado PAGADA
-6. Login como `admin@cinezaror.cl` → panel admin
 
 > **Nota:** Las funciones demo se crean con fechas futuras (`SYSTIMESTAMP + 1 día`). En cartelera, selecciona la fecha de mañana o posterior si no ves funciones al abrir la app.
 
-## 5. Pruebas
+## 5. Flujo demo administrativo
+
+Login como `admin@cinezaror.cl` / `Secreta123` → menú **Administración**.
+
+1. **Películas** (`/admin/peliculas`) → **Nueva película** → completar título, duración, clasificación → Guardar
+2. **Salas** (`/admin/salas`) → **Nueva sala** → definir nombre, filas y columnas → Guardar
+3. En la fila de la sala → **Generar asientos** (solo si aún no tiene asientos)
+4. **Funciones** (`/admin/funciones`) → **Nueva función** → seleccionar película y sala activas, fecha/hora futura y precio → Guardar
+5. Cerrar sesión admin (o abrir otra pestaña) → **Cartelera** → elegir la fecha de la función creada → verificar que aparece en la cartelera
+
+Acciones disponibles en cada módulo:
+
+| Entidad   | Listar | Crear | Editar | Activar/Desactivar | Extra              |
+|-----------|--------|-------|--------|--------------------|--------------------|
+| Películas | Sí     | Sí    | Sí     | Sí                 | —                  |
+| Salas     | Sí     | Sí    | Sí*    | Sí                 | Generar asientos   |
+| Funciones | Sí     | Sí    | Sí**   | Sí                 | —                  |
+
+\* Editar filas/columnas solo si la sala no tiene asientos generados (validado en Oracle).  
+\** Editar solo funciones futuras; no se puede cambiar sala si hay reservas pagadas (RN-20).
+
+Si actualizaste los procedimientos Oracle, reaplica el script:
+
+```bash
+sqlplus curso/curso123@localhost/XEPDB1 @database/sql/05_procedures.sql
+```
+
+## 6. Pruebas
 
 - SQL: `database/sql/10_tests.sql`
 - Consultas: `database/sql/09_queries.sql`
-- Backend: `mvn test` en `backend/`
+- Backend: `mvn test` y `mvn package` en `backend/`
+- Frontend: `npm run build` en `frontend/`
 
 ## Documentación
 

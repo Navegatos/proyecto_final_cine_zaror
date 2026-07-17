@@ -32,5 +32,7 @@ public class AdminService {
     public List<Map<String, Object>> listarFunciones() { return adminRepository.listarFunciones(); }
     public Long crearFuncion(FuncionRequest req) { return adminRepository.crearFuncion(req); }
     public void actualizarFuncion(Long id, FuncionRequest req) { adminRepository.actualizarFuncion(id, req); }
-    public void desactivarFuncion(Long id) { adminRepository.desactivarFuncion(id); }
+    public void cambiarEstadoFuncion(Long id, EstadoRequest req) {
+        adminRepository.cambiarEstadoFuncion(id, req.activo());
+    }
 }

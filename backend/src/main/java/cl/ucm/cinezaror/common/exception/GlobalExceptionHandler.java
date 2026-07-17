@@ -88,7 +88,12 @@ public class GlobalExceptionHandler {
         int oraIndex = rawMessage.indexOf("ORA-");
         if (oraIndex >= 0) {
             int end = rawMessage.indexOf('\n', oraIndex);
-            return end > oraIndex ? rawMessage.substring(oraIndex, end) : rawMessage.substring(oraIndex);
+            String line = end > oraIndex ? rawMessage.substring(oraIndex, end) : rawMessage.substring(oraIndex);
+            int colon = line.indexOf(':');
+            if (colon > 0 && colon < line.length() - 1) {
+                return line.substring(colon + 1).trim();
+            }
+            return line;
         }
 
         return "Error al ejecutar operación en la base de datos";

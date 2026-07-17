@@ -183,4 +183,93 @@ BEGIN
 END;
 /
 
+-- --------------------------------------------------------------------------
+-- 8. Admin: actualizar película
+-- --------------------------------------------------------------------------
+DECLARE
+    V_ID NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('=== TEST: actualizar película ===');
+    SELECT ID_PELICULA INTO V_ID FROM PELICULA WHERE ROWNUM = 1;
+    SP_ACTUALIZAR_PELICULA(V_ID, 'Título Test', 'Sinopsis', 120, 'TE', 'Drama', NULL);
+    DBMS_OUTPUT.PUT_LINE('OK: película actualizada');
+    ROLLBACK;
+END;
+/
+
+-- --------------------------------------------------------------------------
+-- 9. Admin: cambiar estado película
+-- --------------------------------------------------------------------------
+DECLARE
+    V_ID NUMBER; V_ACTIVA NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('=== TEST: estado película ===');
+    SELECT ID_PELICULA, ACTIVA INTO V_ID, V_ACTIVA FROM PELICULA WHERE ROWNUM = 1;
+    SP_CAMBIAR_ESTADO_PELICULA(V_ID, CASE WHEN V_ACTIVA = 1 THEN 0 ELSE 1 END);
+    DBMS_OUTPUT.PUT_LINE('OK: estado película cambiado');
+    ROLLBACK;
+END;
+/
+
+-- --------------------------------------------------------------------------
+-- 10. Admin: superposición al actualizar función
+-- --------------------------------------------------------------------------
+DECLARE
+    V_F1 NUMBER; V_F2 NUMBER; V_P NUMBER; V_S NUMBER;
+    V_FECHA TIMESTAMP;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('=== TEST: superposición al actualizar ===');
+    SELECT F1.ID_FUNCION, F2.ID_FUNCION, F1.ID_PELICULA, F1.ID_SALA, F2.FECHA_HORA
+    INTO   V_F1, V_F2, V_P, V_S, V_FECHA
+    FROM   FUNCION F1
+    JOIN   FUNCION F2 ON F2.ID_SALA = F1.ID_SALA AND F2.ID_FUNCION <> F1.ID_FUNCION
+    WHERE  F1.FECHA_HORA > SYSTIMESTAMP
+      AND  ROWNUM = 1;
+
+    BEGIN
+        SP_ACTUALIZAR_FUNCION(V_F1, V_P, V_S, V_FECHA, 6000);
+        RAISE_APPLICATION_ERROR(-20999, 'FALLO: debió rechazar superposición al actualizar');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -20035 THEN
+                DBMS_OUTPUT.PUT_LINE('OK: ' || SQLERRM);
+            ELSE RAISE;
+            END IF;
+    END;
+END;
+/
+
+-- --------------------------------------------------------------------------
+-- 11. Admin: no modificar sala con reservas pagadas
+-- --------------------------------------------------------------------------
+DECLARE
+    V_F NUMBER; V_P NUMBER; V_S NUMBER; V_S_OTRA NUMBER;
+    V_FECHA TIMESTAMP;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('=== TEST: cambio sala con reservas pagadas ===');
+    SELECT F.ID_FUNCION, F.ID_PELICULA, F.ID_SALA, F.FECHA_HORA
+    INTO   V_F, V_P, V_S, V_FECHA
+    FROM   FUNCION F
+    JOIN   RESERVA R ON R.ID_FUNCION = F.ID_FUNCION
+    JOIN   ESTADO_RESERVA ER ON ER.ID_ESTADO = R.ID_ESTADO
+    WHERE  ER.NOMBRE = 'PAGADA'
+      AND  F.FECHA_HORA > SYSTIMESTAMP
+      AND  ROWNUM = 1;
+
+    SELECT ID_SALA INTO V_S_OTRA FROM SALA WHERE ID_SALA <> V_S AND ACTIVA = 1 AND ROWNUM = 1;
+
+    BEGIN
+        SP_ACTUALIZAR_FUNCION(V_F, V_P, V_S_OTRA, V_FECHA, 6000);
+        RAISE_APPLICATION_ERROR(-20999, 'FALLO: debió rechazar cambio de sala');
+    EXCEPTION
+        WHEN OTHERS THEN
+            IF SQLCODE = -20038 THEN
+                DBMS_OUTPUT.PUT_LINE('OK: ' || SQLERRM);
+            ELSE
+                DBMS_OUTPUT.PUT_LINE('SKIP: ' || SQLERRM);
+            END IF;
+    END;
+END;
+/
+
 PROMPT === TESTS COMPLETADOS ===

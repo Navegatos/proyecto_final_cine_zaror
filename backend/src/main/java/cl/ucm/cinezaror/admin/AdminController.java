@@ -107,8 +107,9 @@ public class AdminController {
     }
 
     @PatchMapping("/funciones/{id}/estado")
-    public ResponseEntity<ApiResponse<Void>> desactivarFuncion(@PathVariable Long id) {
-        adminService.desactivarFuncion(id);
-        return ResponseEntity.ok(ApiResponse.ok("Función desactivada", null));
+    public ResponseEntity<ApiResponse<Void>> estadoFuncion(
+            @PathVariable Long id, @Valid @RequestBody EstadoRequest request) {
+        adminService.cambiarEstadoFuncion(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Estado actualizado", null));
     }
 }

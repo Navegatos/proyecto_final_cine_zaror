@@ -521,20 +521,356 @@ END SP_ANULAR_RESERVA;
 /
 
 -- ----------------------------------------------------------------------------
--- SP_DESACTIVAR_FUNCION
+-- SP_ACTUALIZAR_PELICULA
+-- RN-06
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_PELICULA (
+    P_ID_PELICULA      IN NUMBER,
+    P_TITULO           IN  VARCHAR2,
+    P_SINOPSIS         IN  VARCHAR2,
+    P_DURACION_MINUTOS IN  NUMBER,
+    P_CLASIFICACION    IN  VARCHAR2,
+    P_GENERO           IN  VARCHAR2,
+    P_URL_IMAGEN       IN  VARCHAR2
+)
+IS
+    V_EXISTE NUMBER;
+BEGIN
+    IF P_ID_PELICULA IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20012, 'La película es obligatoria');
+    END IF;
+
+    SELECT COUNT(*) INTO V_EXISTE FROM PELICULA WHERE ID_PELICULA = P_ID_PELICULA;
+    IF V_EXISTE = 0 THEN
+        RAISE_APPLICATION_ERROR(-20012, 'Película no encontrada');
+    END IF;
+
+    IF P_TITULO IS NULL OR P_DURACION_MINUTOS IS NULL OR P_CLASIFICACION IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Título, duración y clasificación son obligatorios');
+    END IF;
+
+    IF P_DURACION_MINUTOS <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20011, 'La duración debe ser mayor a 0');
+    END IF;
+
+    UPDATE PELICULA
+    SET    TITULO = P_TITULO,
+           SINOPSIS = P_SINOPSIS,
+           DURACION_MINUTOS = P_DURACION_MINUTOS,
+           CLASIFICACION = P_CLASIFICACION,
+           GENERO = P_GENERO,
+           URL_IMAGEN = P_URL_IMAGEN
+    WHERE  ID_PELICULA = P_ID_PELICULA;
+END SP_ACTUALIZAR_PELICULA;
+/
+
+-- ----------------------------------------------------------------------------
+-- SP_CAMBIAR_ESTADO_PELICULA
+-- RN-08: desactivación lógica, sin eliminación física.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_PELICULA (
+    P_ID_PELICULA IN NUMBER,
+    P_ACTIVA      IN NUMBER
+)
+IS
+    V_ACTIVA_ACTUAL NUMBER;
+BEGIN
+    IF P_ID_PELICULA IS NULL OR P_ACTIVA IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20012, 'Parámetros inválidos');
+    END IF;
+
+    IF P_ACTIVA NOT IN (0, 1) THEN
+        RAISE_APPLICATION_ERROR(-20013, 'Estado inválido');
+    END IF;
+
+    BEGIN
+        SELECT ACTIVA INTO V_ACTIVA_ACTUAL FROM PELICULA WHERE ID_PELICULA = P_ID_PELICULA;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20012, 'Película no encontrada');
+    END;
+
+    IF V_ACTIVA_ACTUAL = P_ACTIVA THEN
+        IF P_ACTIVA = 1 THEN
+            RAISE_APPLICATION_ERROR(-20013, 'La película ya está activa');
+        ELSE
+            RAISE_APPLICATION_ERROR(-20013, 'La película ya está inactiva');
+        END IF;
+    END IF;
+
+    UPDATE PELICULA SET ACTIVA = P_ACTIVA WHERE ID_PELICULA = P_ID_PELICULA;
+END SP_CAMBIAR_ESTADO_PELICULA;
+/
+
+-- ----------------------------------------------------------------------------
+-- SP_ACTUALIZAR_SALA
+-- RN-09, RN-10: no modificar dimensiones si ya hay asientos.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_SALA (
+    P_ID_SALA  IN NUMBER,
+    P_NOMBRE   IN  VARCHAR2,
+    P_FILAS    IN  NUMBER,
+    P_COLUMNAS IN  NUMBER
+)
+IS
+    V_FILAS_ACT    NUMBER;
+    V_COLUMNAS_ACT NUMBER;
+    V_ASIENTOS     NUMBER;
+    V_DUPLICADO    NUMBER;
+BEGIN
+    IF P_ID_SALA IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20022, 'La sala es obligatoria');
+    END IF;
+
+    BEGIN
+        SELECT FILAS, COLUMNAS
+        INTO   V_FILAS_ACT, V_COLUMNAS_ACT
+        FROM   SALA
+        WHERE  ID_SALA = P_ID_SALA;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20022, 'Sala no encontrada');
+    END;
+
+    IF P_NOMBRE IS NULL OR P_FILAS IS NULL OR P_COLUMNAS IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20020, 'Nombre, filas y columnas son obligatorios');
+    END IF;
+
+    IF P_FILAS <= 0 OR P_COLUMNAS <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20021, 'Filas y columnas deben ser mayores a 0');
+    END IF;
+
+    SELECT COUNT(*) INTO V_DUPLICADO
+    FROM   SALA
+    WHERE  UPPER(NOMBRE) = UPPER(P_NOMBRE)
+      AND  ID_SALA <> P_ID_SALA;
+
+    IF V_DUPLICADO > 0 THEN
+        RAISE_APPLICATION_ERROR(-20024, 'Ya existe una sala con ese nombre');
+    END IF;
+
+    SELECT COUNT(*) INTO V_ASIENTOS FROM ASIENTO WHERE ID_SALA = P_ID_SALA;
+
+    IF V_ASIENTOS > 0 AND (P_FILAS <> V_FILAS_ACT OR P_COLUMNAS <> V_COLUMNAS_ACT) THEN
+        RAISE_APPLICATION_ERROR(-20025, 'No se pueden modificar filas o columnas con asientos generados');
+    END IF;
+
+    UPDATE SALA
+    SET    NOMBRE = P_NOMBRE,
+           FILAS = P_FILAS,
+           COLUMNAS = P_COLUMNAS
+    WHERE  ID_SALA = P_ID_SALA;
+END SP_ACTUALIZAR_SALA;
+/
+
+-- ----------------------------------------------------------------------------
+-- SP_CAMBIAR_ESTADO_SALA
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_SALA (
+    P_ID_SALA IN NUMBER,
+    P_ACTIVA  IN NUMBER
+)
+IS
+    V_ACTIVA_ACTUAL NUMBER;
+BEGIN
+    IF P_ID_SALA IS NULL OR P_ACTIVA IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20022, 'Parámetros inválidos');
+    END IF;
+
+    IF P_ACTIVA NOT IN (0, 1) THEN
+        RAISE_APPLICATION_ERROR(-20026, 'Estado inválido');
+    END IF;
+
+    BEGIN
+        SELECT ACTIVA INTO V_ACTIVA_ACTUAL FROM SALA WHERE ID_SALA = P_ID_SALA;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20022, 'Sala no encontrada');
+    END;
+
+    IF V_ACTIVA_ACTUAL = P_ACTIVA THEN
+        IF P_ACTIVA = 1 THEN
+            RAISE_APPLICATION_ERROR(-20026, 'La sala ya está activa');
+        ELSE
+            RAISE_APPLICATION_ERROR(-20026, 'La sala ya está inactiva');
+        END IF;
+    END IF;
+
+    UPDATE SALA SET ACTIVA = P_ACTIVA WHERE ID_SALA = P_ID_SALA;
+END SP_CAMBIAR_ESTADO_SALA;
+/
+
+-- ----------------------------------------------------------------------------
+-- SP_ACTUALIZAR_FUNCION
+-- RN-14 a RN-20: solo funciones futuras; superposición en Oracle.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_FUNCION (
+    P_ID_FUNCION  IN NUMBER,
+    P_ID_PELICULA IN NUMBER,
+    P_ID_SALA     IN NUMBER,
+    P_FECHA_HORA  IN TIMESTAMP,
+    P_PRECIO      IN NUMBER
+)
+IS
+    V_ACTIVA_PEL NUMBER;
+    V_ACTIVA_SAL NUMBER;
+    V_FECHA_ACT  FUNCION.FECHA_HORA%TYPE;
+    V_SALA_ACT   FUNCION.ID_SALA%TYPE;
+    V_RESERVAS   NUMBER;
+BEGIN
+    IF P_ID_FUNCION IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20037, 'La función es obligatoria');
+    END IF;
+
+    BEGIN
+        SELECT F.FECHA_HORA, F.ID_SALA
+        INTO   V_FECHA_ACT, V_SALA_ACT
+        FROM   FUNCION F
+        WHERE  F.ID_FUNCION = P_ID_FUNCION;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20037, 'Función no encontrada');
+    END;
+
+    IF V_FECHA_ACT <= SYSTIMESTAMP THEN
+        RAISE_APPLICATION_ERROR(-20039, 'No se puede modificar una función que ya comenzó');
+    END IF;
+
+    IF P_ID_PELICULA IS NULL OR P_ID_SALA IS NULL OR P_FECHA_HORA IS NULL OR P_PRECIO IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20030, 'Todos los campos son obligatorios');
+    END IF;
+
+    IF P_PRECIO <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20031, 'El precio debe ser mayor a 0');
+    END IF;
+
+    IF P_FECHA_HORA <= SYSTIMESTAMP THEN
+        RAISE_APPLICATION_ERROR(-20032, 'La fecha y hora deben ser futuras');
+    END IF;
+
+    BEGIN
+        SELECT ACTIVA INTO V_ACTIVA_PEL FROM PELICULA WHERE ID_PELICULA = P_ID_PELICULA;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20033, 'Película no encontrada');
+    END;
+
+    IF V_ACTIVA_PEL <> 1 THEN
+        RAISE_APPLICATION_ERROR(-20033, 'La película no está activa');
+    END IF;
+
+    BEGIN
+        SELECT ACTIVA INTO V_ACTIVA_SAL FROM SALA WHERE ID_SALA = P_ID_SALA;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20034, 'Sala no encontrada');
+    END;
+
+    IF V_ACTIVA_SAL <> 1 THEN
+        RAISE_APPLICATION_ERROR(-20034, 'La sala no está activa');
+    END IF;
+
+    IF P_ID_SALA <> V_SALA_ACT THEN
+        SELECT COUNT(*)
+        INTO   V_RESERVAS
+        FROM   RESERVA R
+        JOIN   ESTADO_RESERVA ER ON ER.ID_ESTADO = R.ID_ESTADO
+        WHERE  R.ID_FUNCION = P_ID_FUNCION
+          AND  ER.NOMBRE = 'PAGADA';
+
+        IF V_RESERVAS > 0 THEN
+            RAISE_APPLICATION_ERROR(-20038,
+                'No se puede modificar la sala con reservas pagadas');
+        END IF;
+    END IF;
+
+    IF FN_EXISTE_SUPERPOSICION_FUNCION(P_ID_SALA, P_ID_PELICULA, P_FECHA_HORA, P_ID_FUNCION) = 1 THEN
+        RAISE_APPLICATION_ERROR(-20035, 'Existe superposición de horario en la sala');
+    END IF;
+
+    UPDATE FUNCION
+    SET    ID_PELICULA = P_ID_PELICULA,
+           ID_SALA = P_ID_SALA,
+           FECHA_HORA = P_FECHA_HORA,
+           PRECIO = P_PRECIO
+    WHERE  ID_FUNCION = P_ID_FUNCION;
+END SP_ACTUALIZAR_FUNCION;
+/
+
+-- ----------------------------------------------------------------------------
+-- SP_CAMBIAR_ESTADO_FUNCION
+-- Activa o desactiva una función (RN-21).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_FUNCION (
+    P_ID_FUNCION IN NUMBER,
+    P_ACTIVA     IN NUMBER
+)
+IS
+    V_ACTIVA_ACTUAL NUMBER;
+    V_ID_PELICULA   FUNCION.ID_PELICULA%TYPE;
+    V_ID_SALA       FUNCION.ID_SALA%TYPE;
+    V_FECHA_HORA    FUNCION.FECHA_HORA%TYPE;
+    V_ACTIVA_PEL    NUMBER;
+    V_ACTIVA_SAL    NUMBER;
+BEGIN
+    IF P_ID_FUNCION IS NULL OR P_ACTIVA IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20037, 'Parámetros inválidos');
+    END IF;
+
+    IF P_ACTIVA NOT IN (0, 1) THEN
+        RAISE_APPLICATION_ERROR(-20036, 'Estado inválido');
+    END IF;
+
+    BEGIN
+        SELECT F.ACTIVA, F.ID_PELICULA, F.ID_SALA, F.FECHA_HORA
+        INTO   V_ACTIVA_ACTUAL, V_ID_PELICULA, V_ID_SALA, V_FECHA_HORA
+        FROM   FUNCION F
+        WHERE  F.ID_FUNCION = P_ID_FUNCION;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20037, 'Función no encontrada');
+    END;
+
+    IF V_ACTIVA_ACTUAL = P_ACTIVA THEN
+        IF P_ACTIVA = 1 THEN
+            RAISE_APPLICATION_ERROR(-20036, 'La función ya está activa');
+        ELSE
+            RAISE_APPLICATION_ERROR(-20036, 'La función ya está desactivada');
+        END IF;
+    END IF;
+
+    IF P_ACTIVA = 1 THEN
+        SELECT ACTIVA INTO V_ACTIVA_PEL FROM PELICULA WHERE ID_PELICULA = V_ID_PELICULA;
+        IF V_ACTIVA_PEL <> 1 THEN
+            RAISE_APPLICATION_ERROR(-20033, 'La película no está activa');
+        END IF;
+
+        SELECT ACTIVA INTO V_ACTIVA_SAL FROM SALA WHERE ID_SALA = V_ID_SALA;
+        IF V_ACTIVA_SAL <> 1 THEN
+            RAISE_APPLICATION_ERROR(-20034, 'La sala no está activa');
+        END IF;
+
+        IF V_FECHA_HORA <= SYSTIMESTAMP THEN
+            RAISE_APPLICATION_ERROR(-20039, 'No se puede activar una función pasada');
+        END IF;
+
+        IF FN_EXISTE_SUPERPOSICION_FUNCION(V_ID_SALA, V_ID_PELICULA, V_FECHA_HORA, P_ID_FUNCION) = 1 THEN
+            RAISE_APPLICATION_ERROR(-20035, 'Existe superposición de horario en la sala');
+        END IF;
+    END IF;
+
+    UPDATE FUNCION SET ACTIVA = P_ACTIVA WHERE ID_FUNCION = P_ID_FUNCION;
+END SP_CAMBIAR_ESTADO_FUNCION;
+/
+
+-- ----------------------------------------------------------------------------
+-- SP_DESACTIVAR_FUNCION (compatibilidad; delega en SP_CAMBIAR_ESTADO_FUNCION)
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE SP_DESACTIVAR_FUNCION (
     P_ID_FUNCION IN NUMBER
 )
 IS
-    V_ACTIVA NUMBER;
 BEGIN
-    SELECT ACTIVA INTO V_ACTIVA FROM FUNCION WHERE ID_FUNCION = P_ID_FUNCION;
-
-    IF V_ACTIVA = 0 THEN
-        RAISE_APPLICATION_ERROR(-20036, 'La función ya está desactivada');
-    END IF;
-
-    UPDATE FUNCION SET ACTIVA = 0 WHERE ID_FUNCION = P_ID_FUNCION;
+    SP_CAMBIAR_ESTADO_FUNCION(P_ID_FUNCION, 0);
 END SP_DESACTIVAR_FUNCION;
 /
