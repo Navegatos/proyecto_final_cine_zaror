@@ -1,27 +1,8 @@
--- ============================================================================
--- Cine Zaror — 05_procedures.sql
--- Procedimientos almacenados del sistema.
--- Fuente: docs/04-objetos-oracle.md, docs/02-reglas-negocio.md
--- ============================================================================
--- Errores de reserva: rango -20040 a -20059 (docs/04-objetos-oracle.md)
--- ============================================================================
-
--- Tipo auxiliar para recibir lista de IDs de asientos desde Spring/JDBC.
--- Justificación: la API recibe un arreglo de asientoIds (docs/06-api-rest.md).
+-- Tipo para recibir listas de IDs de asientos
 CREATE OR REPLACE TYPE T_LISTA_ID AS TABLE OF NUMBER;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CREAR_RESERVA
--- Crea una reserva PENDIENTE con sus asientos en una única transacción.
--- RN-22 a RN-35
---
--- Concurrencia:
---   1. SELECT FOR UPDATE sobre FUNCION y ASIENTO (orden ascendente por ID).
---   2. Revalidación de disponibilidad dentro de la transacción (RN-25, RN-34).
---   3. UQ_RESERVA_ASIENTO_FUNCION_ASIENTO como barrera final ante carrera (RN-33, RN-35).
---   4. Sin COMMIT interno: Spring Boot controla la transacción (docs/04-objetos-oracle.md).
--- ----------------------------------------------------------------------------
+-- Crea una reserva pendiente con validación y bloqueo de asientos
 CREATE OR REPLACE PROCEDURE SP_CREAR_RESERVA (
     P_ID_USUARIO IN  NUMBER,
     P_ID_FUNCION IN  NUMBER,
@@ -42,9 +23,6 @@ IS
     V_ID_SALA_ASIENTO  ASIENTO.ID_SALA%TYPE;
     V_ACTIVO_ASIENTO   ASIENTO.ACTIVO%TYPE;
 BEGIN
-    -- ------------------------------------------------------------------
-    -- Validar parámetros de entrada
-    -- ------------------------------------------------------------------
     IF P_ID_USUARIO IS NULL THEN
         RAISE_APPLICATION_ERROR(-20040, 'El usuario es obligatorio');
     END IF;
@@ -57,9 +35,6 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20044, 'Debe seleccionar al menos un asiento');
     END IF;
 
-    -- ------------------------------------------------------------------
-    -- 1. Validar usuario (RN-04, RN-05)
-    -- ------------------------------------------------------------------
     BEGIN
         SELECT U.ACTIVO
         INTO   V_ACTIVO_USUARIO
@@ -74,10 +49,6 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20041, 'El usuario está inactivo');
     END IF;
 
-    -- ------------------------------------------------------------------
-    -- 2. Validar función vigente (RN-15, RN-19, RN-21)
-    --    Bloqueo de fila para serializar reservas concurrentes en la función.
-    -- ------------------------------------------------------------------
     BEGIN
         SELECT F.PRECIO, F.ID_SALA
         INTO   V_PRECIO_FUNCION, V_ID_SALA_FUNCION
@@ -93,12 +64,8 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20043, 'La función no está vigente o ya comenzó');
     END IF;
 
-    -- ------------------------------------------------------------------
-    -- 3. Validar asientos de la solicitud (RN-23, RN-24, RN-13)
-    -- ------------------------------------------------------------------
     V_CANTIDAD := P_ASIENTOS.COUNT;
 
-    -- Detectar IDs duplicados en la lista enviada por el cliente
     SELECT COUNT(*)
     INTO   V_DUPLICADOS
     FROM   (
@@ -112,7 +79,6 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20048, 'La solicitud contiene asientos duplicados');
     END IF;
 
-    -- Bloquear asientos en orden fijo para reducir deadlocks (RN-33, RN-34)
     FOR REC_ASIENTO IN (
         SELECT A.ID_ASIENTO
         FROM   ASIENTO A
@@ -123,7 +89,6 @@ BEGIN
         NULL;
     END LOOP;
 
-    -- Validar existencia, sala, estado activo y disponibilidad (RN-25, RN-31, RN-32)
     FOR I IN 1 .. P_ASIENTOS.COUNT LOOP
         V_ID_ASIENTO := P_ASIENTOS(I);
 
@@ -154,7 +119,6 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- Verificar que se bloquearon todos los asientos solicitados
     SELECT COUNT(DISTINCT A.ID_ASIENTO)
     INTO   V_DUPLICADOS
     FROM   ASIENTO A
@@ -164,9 +128,6 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20047, 'Uno o más asientos de la solicitud no existen');
     END IF;
 
-    -- ------------------------------------------------------------------
-    -- Obtener estado PENDIENTE (RN-28)
-    -- ------------------------------------------------------------------
     BEGIN
         SELECT ER.ID_ESTADO
         INTO   V_ID_ESTADO_PEND
@@ -177,18 +138,12 @@ BEGIN
             RAISE_APPLICATION_ERROR(-20049, 'Estado PENDIENTE no configurado en el catálogo');
     END;
 
-    -- ------------------------------------------------------------------
-    -- 4. Calcular total en Oracle (RN-26, RN-27)
-    -- ------------------------------------------------------------------
     P_TOTAL := FN_CALCULAR_TOTAL_RESERVA(V_PRECIO_FUNCION, V_CANTIDAD);
 
     IF P_TOTAL <= 0 THEN
         RAISE_APPLICATION_ERROR(-20044, 'No fue posible calcular un total válido para la reserva');
     END IF;
 
-    -- ------------------------------------------------------------------
-    -- 5. Insertar reserva y detalle de asientos
-    -- ------------------------------------------------------------------
     P_ID_RESERVA := SEQ_RESERVA.NEXTVAL;
 
     P_CODIGO := 'ZAR-'
@@ -231,7 +186,6 @@ BEGIN
             );
         EXCEPTION
             WHEN DUP_VAL_ON_INDEX THEN
-                -- Barrera final ante condición de carrera (RN-33, RN-35)
                 RAISE_APPLICATION_ERROR(-20045,
                     'El asiento ' || P_ASIENTOS(I) || ' fue reservado por otra transacción');
         END;
@@ -239,7 +193,6 @@ BEGIN
 
 EXCEPTION
     WHEN OTHERS THEN
-        -- Propagar errores de aplicación; envolver errores inesperados
         IF SQLCODE BETWEEN -20059 AND -20040 THEN
             RAISE;
         END IF;
@@ -247,10 +200,7 @@ EXCEPTION
 END SP_CREAR_RESERVA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_REGISTRAR_USUARIO
--- RN-01, RN-02, RN-03, RN-05
--- ----------------------------------------------------------------------------
+-- Registra un nuevo cliente en el sistema
 CREATE OR REPLACE PROCEDURE SP_REGISTRAR_USUARIO (
     P_RUT             IN  VARCHAR2,
     P_NOMBRE_COMPLETO IN  VARCHAR2,
@@ -291,9 +241,7 @@ BEGIN
 END SP_REGISTRAR_USUARIO;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CREAR_PELICULA
--- ----------------------------------------------------------------------------
+-- Alta de una película en el catálogo
 CREATE OR REPLACE PROCEDURE SP_CREAR_PELICULA (
     P_TITULO           IN  VARCHAR2,
     P_SINOPSIS         IN  VARCHAR2,
@@ -320,9 +268,7 @@ BEGIN
 END SP_CREAR_PELICULA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CREAR_SALA
--- ----------------------------------------------------------------------------
+-- Alta de una sala de proyección
 CREATE OR REPLACE PROCEDURE SP_CREAR_SALA (
     P_NOMBRE   IN  VARCHAR2,
     P_FILAS    IN  NUMBER,
@@ -346,10 +292,7 @@ BEGIN
 END SP_CREAR_SALA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_GENERAR_ASIENTOS_SALA
--- Genera asientos: Fila A.., números 1..columnas.
--- ----------------------------------------------------------------------------
+-- Genera la grilla de asientos de una sala
 CREATE OR REPLACE PROCEDURE SP_GENERAR_ASIENTOS_SALA (
     P_ID_SALA IN NUMBER
 )
@@ -381,10 +324,7 @@ BEGIN
 END SP_GENERAR_ASIENTOS_SALA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CREAR_FUNCION
--- RN-14 a RN-18
--- ----------------------------------------------------------------------------
+-- Programa una función validando horario y disponibilidad
 CREATE OR REPLACE PROCEDURE SP_CREAR_FUNCION (
     P_ID_PELICULA IN  NUMBER,
     P_ID_SALA     IN  NUMBER,
@@ -429,10 +369,7 @@ BEGIN
 END SP_CREAR_FUNCION;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CONFIRMAR_PAGO
--- RN-36 a RN-39
--- ----------------------------------------------------------------------------
+-- Confirma el pago y marca la reserva como pagada
 CREATE OR REPLACE PROCEDURE SP_CONFIRMAR_PAGO (
     P_ID_RESERVA       IN  NUMBER,
     P_METODO           IN  VARCHAR2,
@@ -486,10 +423,7 @@ BEGIN
 END SP_CONFIRMAR_PAGO;
 /
 
--- ----------------------------------------------------------------------------
--- SP_ANULAR_RESERVA
--- Cambia estado a ANULADA; libera asientos (RN-30).
--- ----------------------------------------------------------------------------
+-- Anula una reserva pendiente y libera los asientos
 CREATE OR REPLACE PROCEDURE SP_ANULAR_RESERVA (
     P_ID_RESERVA IN NUMBER
 )
@@ -520,10 +454,7 @@ BEGIN
 END SP_ANULAR_RESERVA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_ACTUALIZAR_PELICULA
--- RN-06
--- ----------------------------------------------------------------------------
+-- Modifica los datos de una película
 CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_PELICULA (
     P_ID_PELICULA      IN NUMBER,
     P_TITULO           IN  VARCHAR2,
@@ -564,10 +495,7 @@ BEGIN
 END SP_ACTUALIZAR_PELICULA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CAMBIAR_ESTADO_PELICULA
--- RN-08: desactivación lógica, sin eliminación física.
--- ----------------------------------------------------------------------------
+-- Activa o desactiva una película
 CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_PELICULA (
     P_ID_PELICULA IN NUMBER,
     P_ACTIVA      IN NUMBER
@@ -602,10 +530,7 @@ BEGIN
 END SP_CAMBIAR_ESTADO_PELICULA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_ACTUALIZAR_SALA
--- RN-09, RN-10: no modificar dimensiones si ya hay asientos.
--- ----------------------------------------------------------------------------
+-- Modifica una sala respetando asientos existentes
 CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_SALA (
     P_ID_SALA  IN NUMBER,
     P_NOMBRE   IN  VARCHAR2,
@@ -663,9 +588,7 @@ BEGIN
 END SP_ACTUALIZAR_SALA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CAMBIAR_ESTADO_SALA
--- ----------------------------------------------------------------------------
+-- Activa o desactiva una sala
 CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_SALA (
     P_ID_SALA IN NUMBER,
     P_ACTIVA  IN NUMBER
@@ -700,10 +623,7 @@ BEGIN
 END SP_CAMBIAR_ESTADO_SALA;
 /
 
--- ----------------------------------------------------------------------------
--- SP_ACTUALIZAR_FUNCION
--- RN-14 a RN-20: solo funciones futuras; superposición en Oracle.
--- ----------------------------------------------------------------------------
+-- Modifica una función futura validando superposición
 CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_FUNCION (
     P_ID_FUNCION  IN NUMBER,
     P_ID_PELICULA IN NUMBER,
@@ -797,10 +717,7 @@ BEGIN
 END SP_ACTUALIZAR_FUNCION;
 /
 
--- ----------------------------------------------------------------------------
--- SP_CAMBIAR_ESTADO_FUNCION
--- Activa o desactiva una función (RN-21).
--- ----------------------------------------------------------------------------
+-- Activa o desactiva una función
 CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_FUNCION (
     P_ID_FUNCION IN NUMBER,
     P_ACTIVA     IN NUMBER
@@ -863,9 +780,7 @@ BEGIN
 END SP_CAMBIAR_ESTADO_FUNCION;
 /
 
--- ----------------------------------------------------------------------------
--- SP_DESACTIVAR_FUNCION (compatibilidad; delega en SP_CAMBIAR_ESTADO_FUNCION)
--- ----------------------------------------------------------------------------
+-- Desactiva una función (compatibilidad)
 CREATE OR REPLACE PROCEDURE SP_DESACTIVAR_FUNCION (
     P_ID_FUNCION IN NUMBER
 )

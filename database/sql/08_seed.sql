@@ -1,21 +1,18 @@
--- ============================================================================
--- Cine Zaror — 08_seed.sql
--- Catálogo base y datos de demo.
--- Fuente: docs/03-modelo-datos.md, docs/09-plan-pruebas.md §10
--- Password demo para todos los usuarios: Secreta123
--- ============================================================================
+-- Datos iniciales de demostración
 
--- Catálogo de roles
+-- Roles del sistema
 INSERT INTO ROL (ID_ROL, NOMBRE, DESCRIPCION) VALUES (SEQ_ROL.NEXTVAL, 'ADMIN', 'Administrador del sistema');
 INSERT INTO ROL (ID_ROL, NOMBRE, DESCRIPCION) VALUES (SEQ_ROL.NEXTVAL, 'CLIENTE', 'Cliente del cine');
 
--- Catálogo de estados de reserva
+
+-- Estados de reserva
 INSERT INTO ESTADO_RESERVA (ID_ESTADO, NOMBRE) VALUES (SEQ_ESTADO_RESERVA.NEXTVAL, 'PENDIENTE');
 INSERT INTO ESTADO_RESERVA (ID_ESTADO, NOMBRE) VALUES (SEQ_ESTADO_RESERVA.NEXTVAL, 'PAGADA');
 INSERT INTO ESTADO_RESERVA (ID_ESTADO, NOMBRE) VALUES (SEQ_ESTADO_RESERVA.NEXTVAL, 'ANULADA');
 INSERT INTO ESTADO_RESERVA (ID_ESTADO, NOMBRE) VALUES (SEQ_ESTADO_RESERVA.NEXTVAL, 'VENCIDA');
 
--- Usuarios demo (password: Secreta123 — hash BCrypt)
+
+-- Usuarios demo (password: Secreta123)
 DECLARE
     V_ID_ROL_ADMIN   NUMBER;
     V_ID_ROL_CLIENTE NUMBER;
@@ -35,7 +32,8 @@ BEGIN
 END;
 /
 
--- Películas demo
+
+-- Películas de ejemplo
 DECLARE
     V_ID NUMBER;
 BEGIN
@@ -45,7 +43,8 @@ BEGIN
 END;
 /
 
--- Salas y asientos
+
+-- Salas con asientos generados
 DECLARE
     V_ID_SALA1 NUMBER;
     V_ID_SALA2 NUMBER;
@@ -58,7 +57,8 @@ BEGIN
 END;
 /
 
--- Funciones futuras (5)
+
+-- Funciones programadas
 DECLARE
     V_P1 NUMBER; V_P2 NUMBER; V_P3 NUMBER;
     V_S1 NUMBER; V_S2 NUMBER;
@@ -78,7 +78,8 @@ BEGIN
 END;
 /
 
--- Reserva pagada demo (ocupa asientos en primera función)
+
+-- Reserva pagada de ejemplo
 DECLARE
     V_ID_USUARIO  NUMBER;
     V_ID_FUNCION  NUMBER;

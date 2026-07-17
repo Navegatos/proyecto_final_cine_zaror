@@ -1,13 +1,4 @@
--- ============================================================================
--- Cine Zaror — 06_triggers.sql
--- Triggers del sistema.
--- Fuente: docs/04-objetos-oracle.md (sección 5)
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- TRG_USUARIO_NORMALIZAR_EMAIL
--- RN-03: correo en minúsculas y sin espacios laterales.
--- ----------------------------------------------------------------------------
+-- Normaliza el correo a minúsculas sin espacios
 CREATE OR REPLACE TRIGGER TRG_USUARIO_NORMALIZAR_EMAIL
     BEFORE INSERT OR UPDATE OF CORREO ON USUARIO
     FOR EACH ROW
@@ -16,10 +7,7 @@ BEGIN
 END;
 /
 
--- ----------------------------------------------------------------------------
--- TRG_RESERVA_FECHA_CREACION
--- Completa fechas automáticas si no fueron informadas.
--- ----------------------------------------------------------------------------
+-- Asigna fecha de creación si no viene informada
 CREATE OR REPLACE TRIGGER TRG_RESERVA_FECHA_CREACION
     BEFORE INSERT ON RESERVA
     FOR EACH ROW
@@ -30,10 +18,7 @@ BEGIN
 END;
 /
 
--- ----------------------------------------------------------------------------
--- TRG_VALIDAR_RESERVA_ASIENTO
--- RN-24: el asiento debe pertenecer a la sala de la función.
--- ----------------------------------------------------------------------------
+-- Valida que el asiento pertenezca a la sala de la función
 CREATE OR REPLACE TRIGGER TRG_VALIDAR_RESERVA_ASIENTO
     BEFORE INSERT ON RESERVA_ASIENTO
     FOR EACH ROW
@@ -58,10 +43,7 @@ BEGIN
 END;
 /
 
--- ----------------------------------------------------------------------------
--- TRG_AUDITAR_ESTADO_RESERVA
--- Registra cambios de estado en AUDITORIA_RESERVA.
--- ----------------------------------------------------------------------------
+-- Registra cambios de estado en auditoría
 CREATE OR REPLACE TRIGGER TRG_AUDITAR_ESTADO_RESERVA
     AFTER INSERT OR UPDATE OF ID_ESTADO ON RESERVA
     FOR EACH ROW
@@ -104,10 +86,7 @@ BEGIN
 END;
 /
 
--- ----------------------------------------------------------------------------
--- TRG_EVITAR_CAMBIO_FUNCION_RESERVADA
--- RN-20: impide modificar sala o película con reservas pagadas.
--- ----------------------------------------------------------------------------
+-- Impide cambiar película o sala con reservas pagadas
 CREATE OR REPLACE TRIGGER TRG_EVITAR_CAMBIO_FUNCION_RESERVADA
     BEFORE UPDATE OF ID_PELICULA, ID_SALA ON FUNCION
     FOR EACH ROW

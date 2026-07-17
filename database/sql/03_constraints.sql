@@ -1,13 +1,4 @@
--- ============================================================================
--- Cine Zaror — 03_constraints.sql
--- Claves primarias, foráneas, únicas, CHECK e índices recomendados.
--- Fuentes: docs/03-modelo-datos.md, docs/04-objetos-oracle.md
--- ============================================================================
-
--- ============================================================================
--- CLAVES PRIMARIAS
--- ============================================================================
-
+-- Claves primarias
 ALTER TABLE ROL
     ADD CONSTRAINT PK_ROL PRIMARY KEY (ID_ROL);
 
@@ -41,11 +32,8 @@ ALTER TABLE PAGO
 ALTER TABLE AUDITORIA_RESERVA
     ADD CONSTRAINT PK_AUDITORIA_RESERVA PRIMARY KEY (ID_AUDITORIA);
 
--- ============================================================================
--- CLAVES FORÁNEAS
--- Relaciones documentadas en docs/03-modelo-datos.md (sección 2)
--- ============================================================================
 
+-- Claves foráneas
 ALTER TABLE USUARIO
     ADD CONSTRAINT FK_USUARIO_ROL
     FOREIGN KEY (ID_ROL) REFERENCES ROL (ID_ROL);
@@ -94,10 +82,8 @@ ALTER TABLE AUDITORIA_RESERVA
     ADD CONSTRAINT FK_AUDITORIA_RESERVA
     FOREIGN KEY (ID_RESERVA) REFERENCES RESERVA (ID_RESERVA);
 
--- ============================================================================
--- RESTRICCIONES UNIQUE
--- ============================================================================
 
+-- Restricciones de unicidad
 ALTER TABLE ROL
     ADD CONSTRAINT UQ_ROL_NOMBRE UNIQUE (NOMBRE);
 
@@ -110,7 +96,6 @@ ALTER TABLE USUARIO
 ALTER TABLE SALA
     ADD CONSTRAINT UQ_SALA_NOMBRE UNIQUE (NOMBRE);
 
--- RN-12: no puede haber dos asientos con igual fila y número en la misma sala
 ALTER TABLE ASIENTO
     ADD CONSTRAINT UQ_ASIENTO_SALA_FILA_NUMERO UNIQUE (ID_SALA, FILA, NUMERO);
 
@@ -120,27 +105,23 @@ ALTER TABLE ESTADO_RESERVA
 ALTER TABLE RESERVA
     ADD CONSTRAINT UQ_RESERVA_CODIGO UNIQUE (CODIGO);
 
--- Protección principal contra venta doble de asiento en una función
+-- Evita vender el mismo asiento dos veces en una función
 ALTER TABLE RESERVA_ASIENTO
     ADD CONSTRAINT UQ_RESERVA_ASIENTO_FUNCION_ASIENTO UNIQUE (ID_FUNCION, ID_ASIENTO);
 
--- Relación 1:1 RESERVA — PAGO (docs/03-modelo-datos.md sección 2)
+-- Relación uno a uno entre reserva y pago
 ALTER TABLE PAGO
     ADD CONSTRAINT UQ_PAGO_RESERVA UNIQUE (ID_RESERVA);
 
 ALTER TABLE PAGO
     ADD CONSTRAINT UQ_PAGO_CODIGO_OPERACION UNIQUE (CODIGO_OPERACION);
 
--- ============================================================================
--- RESTRICCIONES CHECK
--- ============================================================================
 
--- Película: duración positiva
+-- Restricciones de validación
 ALTER TABLE PELICULA
     ADD CONSTRAINT CK_PELICULA_DURACION_POSITIVA
     CHECK (DURACION_MINUTOS > 0);
 
--- Sala: dimensiones positivas
 ALTER TABLE SALA
     ADD CONSTRAINT CK_SALA_FILAS_POSITIVAS
     CHECK (FILAS > 0);
@@ -149,12 +130,10 @@ ALTER TABLE SALA
     ADD CONSTRAINT CK_SALA_COLUMNAS_POSITIVAS
     CHECK (COLUMNAS > 0);
 
--- Función: precio positivo
 ALTER TABLE FUNCION
     ADD CONSTRAINT CK_FUNCION_PRECIO_POSITIVO
     CHECK (PRECIO > 0);
 
--- Reserva: cantidad y total válidos
 ALTER TABLE RESERVA
     ADD CONSTRAINT CK_RESERVA_CANTIDAD_POSITIVA
     CHECK (CANTIDAD_ENTRADAS > 0);
@@ -163,7 +142,6 @@ ALTER TABLE RESERVA
     ADD CONSTRAINT CK_RESERVA_TOTAL_NO_NEGATIVO
     CHECK (TOTAL >= 0);
 
--- Flags de estado activo/inactivo (valores binarios documentados como NUMBER(1))
 ALTER TABLE USUARIO
     ADD CONSTRAINT CK_USUARIO_ACTIVO
     CHECK (ACTIVO IN (0, 1));
@@ -184,11 +162,8 @@ ALTER TABLE FUNCION
     ADD CONSTRAINT CK_FUNCION_ACTIVA
     CHECK (ACTIVA IN (0, 1));
 
--- ============================================================================
--- ÍNDICES RECOMENDADOS
--- Fuente: docs/03-modelo-datos.md (sección 3)
--- ============================================================================
 
+-- Índices para consultas frecuentes
 CREATE INDEX IDX_FUNCION_FECHA
     ON FUNCION (FECHA_HORA);
 

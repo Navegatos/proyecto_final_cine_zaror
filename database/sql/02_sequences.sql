@@ -1,10 +1,4 @@
--- ============================================================================
--- Cine Zaror — 02_sequences.sql
--- Secuencias para generación de identificadores de tablas.
--- Fuente: docs/04-objetos-oracle.md (sección 2)
--- ============================================================================
--- Nota: NOCACHE evita huecos en IDs ante reinicios; adecuado para entorno académico.
--- ============================================================================
+-- Secuencias para generar identificadores de tablas
 
 CREATE SEQUENCE SEQ_ROL
     START WITH 1

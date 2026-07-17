@@ -1,13 +1,7 @@
--- ============================================================================
--- Cine Zaror — 10_tests.sql
--- Pruebas SQL según docs/09-plan-pruebas.md §9
--- Ejecutar con: SET SERVEROUTPUT ON
--- ============================================================================
+-- Pruebas automatizadas de reglas de negocio
 SET SERVEROUTPUT ON SIZE UNLIMITED
 
--- --------------------------------------------------------------------------
--- 1. Registro duplicado (correo)
--- --------------------------------------------------------------------------
+-- Rechaza registro con correo duplicado
 BEGIN
     DBMS_OUTPUT.PUT_LINE('=== TEST: correo duplicado ===');
     DECLARE
@@ -25,9 +19,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 2. Superposición de función
--- --------------------------------------------------------------------------
+-- Rechaza funciones con horario superpuesto
 DECLARE
     V_P NUMBER; V_S NUMBER; V_F TIMESTAMP; V_ID NUMBER;
 BEGIN
@@ -49,9 +41,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 3. Asiento inválido (otra sala)
--- --------------------------------------------------------------------------
+-- Rechaza asiento que no pertenece a la sala
 DECLARE
     V_U NUMBER; V_F NUMBER; V_A NUMBER;
     V_R NUMBER; V_C VARCHAR2(30); V_T NUMBER;
@@ -79,9 +69,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 4. Reserva válida
--- --------------------------------------------------------------------------
+-- Crea una reserva válida
 DECLARE
     V_U NUMBER; V_F NUMBER; V_A NUMBER;
     V_R NUMBER; V_C VARCHAR2(30); V_T NUMBER;
@@ -101,9 +89,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 5. Reserva duplicada (asiento ocupado)
--- --------------------------------------------------------------------------
+-- Rechaza reserva sobre asiento ya ocupado
 DECLARE
     V_U NUMBER; V_F NUMBER; V_A1 NUMBER; V_A2 NUMBER;
     V_R NUMBER; V_C VARCHAR2(30); V_T NUMBER;
@@ -127,9 +113,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 6. Pago repetido
--- --------------------------------------------------------------------------
+-- Rechaza un segundo pago sobre la misma reserva
 DECLARE
     V_R NUMBER; V_P NUMBER; V_C VARCHAR2(50);
 BEGIN
@@ -151,9 +135,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 7. Trigger de auditoría
--- --------------------------------------------------------------------------
+-- Verifica registro en auditoría al cambiar estado
 DECLARE
     V_ANTES NUMBER; V_DESPUES NUMBER;
     V_U NUMBER; V_F NUMBER; V_A NUMBER;
@@ -183,9 +165,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 8. Admin: actualizar película
--- --------------------------------------------------------------------------
+-- Actualiza datos de una película
 DECLARE
     V_ID NUMBER;
 BEGIN
@@ -197,9 +177,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 9. Admin: cambiar estado película
--- --------------------------------------------------------------------------
+-- Cambia el estado activo/inactivo de una película
 DECLARE
     V_ID NUMBER; V_ACTIVA NUMBER;
 BEGIN
@@ -211,9 +189,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 10. Admin: superposición al actualizar función
--- --------------------------------------------------------------------------
+-- Rechaza superposición al actualizar una función
 DECLARE
     V_F1 NUMBER; V_F2 NUMBER; V_P NUMBER; V_S NUMBER;
     V_FECHA TIMESTAMP;
@@ -239,9 +215,7 @@ BEGIN
 END;
 /
 
--- --------------------------------------------------------------------------
--- 11. Admin: no modificar sala con reservas pagadas
--- --------------------------------------------------------------------------
+-- Rechaza cambio de sala con reservas pagadas
 DECLARE
     V_F NUMBER; V_P NUMBER; V_S NUMBER; V_S_OTRA NUMBER;
     V_FECHA TIMESTAMP;

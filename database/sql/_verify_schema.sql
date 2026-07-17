@@ -1,3 +1,4 @@
+-- Verificación del esquema desplegado
 SET PAGESIZE 100
 SET LINESIZE 200
 SET FEEDBACK OFF

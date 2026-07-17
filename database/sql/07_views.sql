@@ -1,13 +1,4 @@
--- ============================================================================
--- Cine Zaror — 07_views.sql
--- Vistas de consulta del sistema.
--- Fuente: docs/04-objetos-oracle.md (sección 6)
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- VW_CARTELERA
--- Películas y funciones vigentes con asientos disponibles.
--- ----------------------------------------------------------------------------
+-- Cartelera con funciones vigentes y cupos disponibles
 CREATE OR REPLACE VIEW VW_CARTELERA AS
 SELECT
     F.ID_FUNCION,
@@ -31,10 +22,7 @@ WHERE  F.ACTIVA = 1
   AND  S.ACTIVA = 1
   AND  F.FECHA_HORA > SYSTIMESTAMP;
 
--- ----------------------------------------------------------------------------
--- VW_ASIENTOS_FUNCION
--- Todos los asientos de una función con su estado.
--- ----------------------------------------------------------------------------
+-- Estado de cada asiento para una función
 CREATE OR REPLACE VIEW VW_ASIENTOS_FUNCION AS
 SELECT
     F.ID_FUNCION,
@@ -51,10 +39,7 @@ FROM   FUNCION F
 JOIN   SALA    S ON S.ID_SALA = F.ID_SALA
 JOIN   ASIENTO A ON A.ID_SALA = F.ID_SALA;
 
--- ----------------------------------------------------------------------------
--- VW_RESERVAS_USUARIO
--- Resumen de reservas por usuario.
--- ----------------------------------------------------------------------------
+-- Resumen de reservas por cliente
 CREATE OR REPLACE VIEW VW_RESERVAS_USUARIO AS
 SELECT
     R.ID_RESERVA,
@@ -81,10 +66,7 @@ JOIN   PELICULA        P  ON P.ID_PELICULA = F.ID_PELICULA
 JOIN   SALA            S  ON S.ID_SALA     = F.ID_SALA
 JOIN   ESTADO_RESERVA  ER ON ER.ID_ESTADO  = R.ID_ESTADO;
 
--- ----------------------------------------------------------------------------
--- VW_RESERVAS_ADMIN
--- Vista administrativa con datos completos.
--- ----------------------------------------------------------------------------
+-- Vista completa de reservas para administración
 CREATE OR REPLACE VIEW VW_RESERVAS_ADMIN AS
 SELECT
     R.ID_RESERVA,

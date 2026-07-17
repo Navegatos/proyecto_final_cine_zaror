@@ -1,7 +1,4 @@
--- ============================================================================
--- Cine Zaror — 09_queries.sql
--- Consultas de referencia para cartelera, asientos y reservas.
--- ============================================================================
+-- Consultas de ejemplo sobre las vistas del sistema
 
 PROMPT === Cartelera del día ===
 SELECT ID_FUNCION, TITULO, SALA, HORA, PRECIO, ASIENTOS_DISPONIBLES

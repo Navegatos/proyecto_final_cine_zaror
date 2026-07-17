@@ -1,15 +1,4 @@
--- ============================================================================
--- Cine Zaror — 04_functions.sql
--- Funciones PL/SQL de apoyo para reservas y funciones.
--- Fuente: docs/04-objetos-oracle.md
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- FN_FUNCION_VIGENTE
--- Valida que la función esté activa, con película/sala activas y no iniciada.
--- RN-15, RN-19, RN-21
--- Retorna: 1 = vigente, 0 = no vigente.
--- ----------------------------------------------------------------------------
+-- Verifica si una función está activa y aún no comienza
 CREATE OR REPLACE FUNCTION FN_FUNCION_VIGENTE (
     P_ID_FUNCION IN NUMBER
 ) RETURN NUMBER
@@ -31,12 +20,7 @@ BEGIN
 END FN_FUNCION_VIGENTE;
 /
 
--- ----------------------------------------------------------------------------
--- FN_ASIENTO_DISPONIBLE
--- Determina si un asiento está disponible para una función.
--- RN-31, RN-32: ocupado si existe en reserva PENDIENTE o PAGADA.
--- Retorna: 1 = disponible, 0 = ocupado o inválido.
--- ----------------------------------------------------------------------------
+-- Indica si un asiento está libre para una función
 CREATE OR REPLACE FUNCTION FN_ASIENTO_DISPONIBLE (
     P_ID_FUNCION IN NUMBER,
     P_ID_ASIENTO IN NUMBER
@@ -44,7 +28,6 @@ CREATE OR REPLACE FUNCTION FN_ASIENTO_DISPONIBLE (
 IS
     V_OCUPADO NUMBER;
 BEGIN
-    -- El asiento debe existir, estar activo y pertenecer a la sala de la función
     SELECT COUNT(*)
     INTO   V_OCUPADO
     FROM   ASIENTO A
@@ -57,7 +40,6 @@ BEGIN
         RETURN 0;
     END IF;
 
-    -- Verificar ocupación por reservas vigentes (PENDIENTE o PAGADA)
     SELECT COUNT(*)
     INTO   V_OCUPADO
     FROM   RESERVA_ASIENTO RA
@@ -71,11 +53,7 @@ BEGIN
 END FN_ASIENTO_DISPONIBLE;
 /
 
--- ----------------------------------------------------------------------------
--- FN_CALCULAR_TOTAL_RESERVA
--- Calcula el total: cantidad de asientos × precio unitario de la función.
--- RN-26
--- ----------------------------------------------------------------------------
+-- Calcula el monto total de una reserva
 CREATE OR REPLACE FUNCTION FN_CALCULAR_TOTAL_RESERVA (
     P_PRECIO_UNITARIO   IN NUMBER,
     P_CANTIDAD_ASIENTOS IN NUMBER
@@ -94,10 +72,7 @@ BEGIN
 END FN_CALCULAR_TOTAL_RESERVA;
 /
 
--- ----------------------------------------------------------------------------
--- FN_CANTIDAD_ASIENTOS_DISPONIBLES
--- Retorna la cantidad de asientos disponibles para una función.
--- ----------------------------------------------------------------------------
+-- Cuenta asientos libres en una función
 CREATE OR REPLACE FUNCTION FN_CANTIDAD_ASIENTOS_DISPONIBLES (
     P_ID_FUNCION IN NUMBER
 ) RETURN NUMBER
@@ -116,12 +91,7 @@ BEGIN
 END FN_CANTIDAD_ASIENTOS_DISPONIBLES;
 /
 
--- ----------------------------------------------------------------------------
--- FN_EXISTE_SUPERPOSICION_FUNCION
--- Valida superposición de horario en una sala (RN-17, RN-18).
--- Margen de limpieza: 20 minutos.
--- Retorna: 1 = existe superposición, 0 = no hay conflicto.
--- ----------------------------------------------------------------------------
+-- Detecta conflicto de horario entre funciones en la misma sala
 CREATE OR REPLACE FUNCTION FN_EXISTE_SUPERPOSICION_FUNCION (
     P_ID_SALA           IN NUMBER,
     P_ID_PELICULA       IN NUMBER,
